@@ -1,6 +1,6 @@
-import { cacheService } from "../../services/cache.service.js";
-import { databaseService } from "../../services/database.service.js";
-import { ProductsRepository } from "./products.repository.js";
+import { cacheService } from '../../services/cache.service.js';
+import { databaseService } from '../../services/database.service.js';
+import { ProductsRepository } from './products.repository.js';
 
 export class ProductsService {
   #repository;

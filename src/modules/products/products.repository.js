@@ -1,159 +1,316 @@
+import { cacheService } from '../../services/cache.service.js';
+import { databaseService } from '../../services/database.service.js';
+import { dateService } from '../../services/date.service.js';
+import { LOG_CONTEXTS, loggerService } from '../../services/logger.service.ts';
+
 /**
  * @typedef {Object} Product
- * @property {string} _id
- * @property {string} name
- * @property {number} price
- * @property {string} category
- * @property {string} status
- */
-
-import { loggerService } from "../../services/logger.service.js";
-
-/**
- * @template T
- * @typedef {import('mongodb').Collection<T>} MongoCollection
+ * @property {string} id - Product unique identifier
+ * @property {string} name - Product name
+ * @property {string} description - Product description
+ * @property {number} price - Product price
+ * @property {string} category - Product category
+ * @property {string[]} images - Array of image URLs
+ * @property {boolean} isActive - Product status
+ * @property {number} createdAt - Creation timestamp
+ * @property {number} updatedAt - Last update timestamp
  */
 
 /**
- * @typedef {import('mongodb').Db} MongoDb
+ * Cache key patterns for products
+ * @readonly
+ * @enum {string}
  */
+const CACHE_KEYS = {
+  /** @type {'products:all'} */
+  ALL: 'products:all',
+  /** @type {'products:category'} */
+  BY_CATEGORY: 'products:category',
+  /** @type {'products:id'} */
+  BY_ID: 'products:id',
+};
 
+/**
+ * Repository for managing product data in MongoDB
+ */
 export class ProductsRepository {
-  #db;
-  #cache;
-  collectionName = "products";
-  #cacheConfig = {
-    ttl: 3600, // 1 hour
-    prefix: "products",
-    keys: {
-      list: (params) => `products:list:${JSON.stringify(params)}`,
-      item: (id) => `products:item:${id}`,
-    },
-  };
+  /** @type {import('mongodb').Collection} */
+  #collection;
 
-  constructor(databaseService, cacheService) {
-    this.#db = databaseService;
-    this.#cache = cacheService;
+  constructor() {
+    // Collection will be initialized on first use
   }
 
-  get collection() {
-    return this.#db.collection(this.collectionName);
+  /**
+   * Get the products collection, initializing it if needed
+   * @private
+   * @returns {Promise<import('mongodb').Collection>}
+   */
+  async #getCollection() {
+    if (!this.#collection) {
+      this.#collection = await databaseService.collection('products');
+    }
+    return this.#collection;
   }
 
-  async find({
-    filter = {},
-    sort = { createdAt: -1 },
-    page = 1,
-    limit = 10,
-    fields = {},
-  } = {}) {
-    // Generate cache key
-    const cacheKey = this.#cacheConfig.keys.list({
-      filter,
-      sort,
-      page,
-      limit,
-      fields,
-    });
-    loggerService.info(`Cache key: ${cacheKey}`);
+  /**
+   * Get cache key for a specific product
+   * @param {string} id - Product ID
+   * @returns {`products:id:${string}`}
+   */
+  #getProductCacheKey(id) {
+    return `${CACHE_KEYS.BY_ID}:${id}`;
+  }
 
-    // Try to get from cache
-    if (this.#cache) {
-      const cached = await this.#cache.get(cacheKey);
-      if (cached) {
-        loggerService.info(`Cache hit for ${cacheKey}`);
-        return cached;
-      }
-      loggerService.info(`Cache miss for ${cacheKey}`);
+  /**
+   * Get cache key for products by category
+   * @param {string} category - Product category
+   * @returns {`products:category:${string}`}
+   */
+  #getCategoryCacheKey(category) {
+    return `${CACHE_KEYS.BY_CATEGORY}:${category}`;
+  }
+
+  /**
+   * Invalidate product caches
+   * @param {string} id - Product ID
+   * @param {string} [category] - Product category
+   * @returns {Promise<void>}
+   */
+  async #invalidateCache(id, category) {
+    const promises = [
+      cacheService.del(CACHE_KEYS.ALL),
+      cacheService.del(this.#getProductCacheKey(id)),
+    ];
+
+    if (category) {
+      promises.push(cacheService.del(this.#getCategoryCacheKey(category)));
     }
 
-    // Calculate skip for pagination
-    const skip = (page - 1) * limit;
+    return Promise.all(promises);
+  }
 
-    // Execute query with pagination
-    const [data, total] = await Promise.all([
-      this.collection
-        .find(filter)
-        .sort(sort)
-        .skip(skip)
-        .limit(limit)
-        .project(fields)
-        .toArray(),
-      this.collection.countDocuments(filter),
-    ]);
+  /**
+   * Find all products with optional filtering
+   * @param {Object} [options] - Query options
+   * @param {Object} [options.filter] - MongoDB filter
+   * @param {Object} [options.sort] - Sort options
+   * @param {number} [options.limit] - Maximum number of products
+   * @param {number} [options.skip] - Number of products to skip
+   * @returns {Promise<Product[]>}
+   */
+  async find(options = {}) {
+    const cacheKey = CACHE_KEYS.ALL;
+    const cached = await cacheService.get(cacheKey);
 
-    // Prepare result
-    const result = {
-      data,
-      meta: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit),
-        hasNext: page * limit < total,
-        hasPrev: page > 1,
-      },
+    if (cached) {
+      loggerService.debug({
+        context: LOG_CONTEXTS.CACHE,
+        message: 'Products retrieved from cache',
+        meta: { count: cached.length },
+      });
+      return cached;
+    }
+
+    const collection = await this.#getCollection();
+    const products = await collection
+      .find(options.filter || {})
+      .sort(options.sort || { createdAt: -1 })
+      .skip(options.skip || 0)
+      .limit(options.limit || 50)
+      .toArray()
+      .catch((error) => {
+        loggerService.error({
+          context: LOG_CONTEXTS.PRODUCTS,
+          error,
+          message: 'Error finding products',
+          meta: { options },
+        });
+        throw error;
+      });
+
+    await cacheService.set(cacheKey, products, 3600);
+    return products;
+  }
+
+  /**
+   * Find a single product by ID
+   * @param {string} id - Product ID
+   * @returns {Promise<Product | null>}
+   */
+  async findOne(id) {
+    const cacheKey = this.#getProductCacheKey(id);
+    const cached = await cacheService.get(cacheKey);
+
+    if (cached) {
+      loggerService.info({
+        context: LOG_CONTEXTS.PRODUCTS,
+        message: 'Product retrieved from cache',
+        meta: { id },
+      });
+      return cached;
+    }
+
+    const collection = await this.#getCollection();
+    const product = await collection.findOne({ _id: id }).catch((error) => {
+      loggerService.error({
+        context: LOG_CONTEXTS.PRODUCTS,
+        error,
+        message: 'Error finding product',
+        meta: { id },
+      });
+      throw error;
+    });
+
+    if (product) {
+      await cacheService.set(cacheKey, product, 3600);
+    }
+    return product;
+  }
+
+  /**
+   * Find products by category
+   * @param {string} category - Product category
+   * @param {Object} [options] - Query options
+   * @param {Object} [options.sort] - Sort options
+   * @param {number} [options.limit] - Maximum number of products
+   * @param {number} [options.skip] - Number of products to skip
+   * @returns {Promise<Product[]>}
+   */
+  async findByCategory(category, options = {}) {
+    const cacheKey = this.#getCategoryCacheKey(category);
+    const cached = await cacheService.get(cacheKey);
+
+    if (cached) {
+      loggerService.info({
+        context: LOG_CONTEXTS.PRODUCTS,
+        message: 'Products by category retrieved from cache',
+        meta: { category, count: cached.length },
+      });
+      return cached;
+    }
+
+    const collection = await this.#getCollection();
+    const products = await collection
+      .find({ category })
+      .sort(options.sort || { createdAt: -1 })
+      .skip(options.skip || 0)
+      .limit(options.limit || 50)
+      .toArray()
+      .catch((error) => {
+        loggerService.error({
+          context: LOG_CONTEXTS.PRODUCTS,
+          error,
+          message: 'Error finding products by category',
+          meta: { category, options },
+        });
+        throw error;
+      });
+
+    await cacheService.set(cacheKey, products, 3600);
+    return products;
+  }
+
+  /**
+   * Insert a new product
+   * @param {Omit<Product, 'id' | 'createdAt' | 'updatedAt'>} product - Product data
+   * @returns {Promise<Product>}
+   */
+  async insert(product) {
+    const timestamp = dateService.now();
+    const newProduct = {
+      ...product,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      isActive: true,
     };
 
-    // Cache the result
-    if (this.#cache) {
-      await this.#cache.set(cacheKey, result, this.#cacheConfig.ttl);
-    }
+    const collection = await this.#getCollection();
+    const result = await collection.insertOne(newProduct).catch((error) => {
+      loggerService.error({
+        context: LOG_CONTEXTS.PRODUCTS,
+        error,
+        message: 'Error inserting product',
+        meta: { product },
+      });
+      throw error;
+    });
 
-    return result;
+    const inserted = { ...newProduct, id: result.insertedId };
+    await this.#invalidateCache(inserted.id, inserted.category);
+    return inserted;
   }
 
-  async findOne({ filter = {}, fields = {} } = {}) {
-    const cacheKey = this.#cache.keys.item(filter._id);
-    const cached = await this.#cache.get(cacheKey);
-    if (cached) return cached;
+  /**
+   * Update an existing product
+   * @param {string} id - Product ID
+   * @param {Partial<Omit<Product, 'id' | 'createdAt' | 'updatedAt'>>} update - Update data
+   * @returns {Promise<Product | null>}
+   */
+  async update(id, update) {
+    const collection = await this.#getCollection();
+    const product = await collection.findOne({ _id: id }).catch((error) => {
+      loggerService.error({
+        context: LOG_CONTEXTS.PRODUCTS,
+        error,
+        message: 'Error finding product for update',
+        meta: { id, update },
+      });
+      throw error;
+    });
 
-    const data = await this.collection.findOne(filter, { projection: fields });
-    const result = { data };
+    if (!product) return null;
 
-    if (data) {
-      await this.#cache.set(cacheKey, result, this.#cache.ttl);
-    }
-    return result;
+    const updatedProduct = {
+      ...product,
+      ...update,
+      updatedAt: dateService.now(),
+    };
+
+    await collection.updateOne({ _id: id }, { $set: updatedProduct }).catch((error) => {
+      loggerService.error({
+        context: LOG_CONTEXTS.PRODUCTS,
+        error,
+        message: 'Error updating product',
+        meta: { id, update },
+      });
+      throw error;
+    });
+
+    await this.#invalidateCache(id, updatedProduct.category);
+    return updatedProduct;
   }
 
-  async insert({ data = {} } = {}) {
-    const result = await this.collection.insertOne(data);
-    await this.#invalidateListCache();
-    return this.findOne({ filter: { _id: result.insertedId } });
-  }
+  /**
+   * Delete a product
+   * @param {string} id - Product ID
+   * @returns {Promise<boolean>}
+   */
+  async delete(id) {
+    const collection = await this.#getCollection();
+    const product = await collection.findOne({ _id: id }).catch((error) => {
+      loggerService.error({
+        context: LOG_CONTEXTS.PRODUCTS,
+        error,
+        message: 'Error finding product for deletion',
+        meta: { id },
+      });
+      throw error;
+    });
 
-  async update({ id, data = {}, options = { returnDocument: "after" } } = {}) {
-    const result = await this.collection.findOneAndUpdate(
-      { _id: id },
-      { $set: data },
-      options,
-    );
+    if (!product) return false;
 
-    if (result) {
-      const cacheKey = this.#cache.keys.item(id);
-      await this.#cache.set(cacheKey, { data: result }, this.#cache.ttl);
-      await this.#invalidateListCache();
-    }
+    await collection.deleteOne({ _id: id }).catch((error) => {
+      loggerService.error({
+        context: LOG_CONTEXTS.PRODUCTS,
+        error,
+        message: 'Error deleting product',
+        meta: { id },
+      });
+      throw error;
+    });
 
-    return { data: result };
-  }
-
-  async delete({ id } = {}) {
-    const result = await this.collection.deleteOne({ _id: id });
-
-    if (result.deletedCount > 0) {
-      await this.#cache.del(this.#cache.keys.item(id));
-      await this.#invalidateListCache();
-    }
-
-    return { success: result.deletedCount > 0 };
-  }
-
-  async #invalidateListCache() {
-    const keys = await this.#cache.keys("products:list:*");
-    if (keys.length) {
-      await Promise.all(keys.map((key) => this.#cache.del(key)));
-    }
+    await this.#invalidateCache(id, product.category);
+    return true;
   }
 }

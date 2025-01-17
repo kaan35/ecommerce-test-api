@@ -24,14 +24,14 @@ export class ValidationService {
 
   #validateRule(rule, value, config) {
     switch (rule) {
-      case "required":
-        return !value ? "Field is required" : null;
-      case "minLength":
+      case 'required':
+        return !value ? 'Field is required' : null;
+      case 'minLength':
         return value?.length < config ? `Minimum length is ${config}` : null;
-      case "maxLength":
+      case 'maxLength':
         return value?.length > config ? `Maximum length is ${config}` : null;
-      case "pattern":
-        return !config.test(value) ? "Invalid format" : null;
+      case 'pattern':
+        return !config.test(value) ? 'Invalid format' : null;
       default:
         return null;
     }

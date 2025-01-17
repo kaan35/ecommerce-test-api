@@ -1,5 +1,5 @@
-import { randomBytes } from "crypto";
-import { loggerService } from "./logger.service.js";
+import { randomBytes } from 'crypto';
+import { loggerService } from './logger.service.js';
 
 class TokenService {
   #tokens = new Map();
@@ -10,13 +10,13 @@ class TokenService {
 
   generate() {
     try {
-      const token = randomBytes(this.#config.length).toString("hex");
+      const token = randomBytes(this.#config.length).toString('hex');
       const expiresAt = Date.now() + this.#config.expiresIn * 1000;
 
       this.#tokens.set(token, expiresAt);
       return token;
     } catch (error) {
-      loggerService.error("Token generation failed", error);
+      loggerService.error('Token generation failed', error);
       throw error;
     }
   }

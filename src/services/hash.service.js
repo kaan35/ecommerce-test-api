@@ -1,5 +1,5 @@
-import { randomBytes, scrypt, timingSafeEqual } from "crypto";
-import { promisify } from "util";
+import { randomBytes, scrypt, timingSafeEqual } from 'crypto';
+import { promisify } from 'util';
 
 const scryptAsync = promisify(scrypt);
 
@@ -13,9 +13,9 @@ class HashService {
    * @returns {Promise<string>} - Hashed password with salt
    */
   async create(password) {
-    const salt = randomBytes(this.#saltLength).toString("hex");
+    const salt = randomBytes(this.#saltLength).toString('hex');
     const derivedKey = await scryptAsync(password, salt, this.#keyLength);
-    return `${salt}:${derivedKey.toString("hex")}`;
+    return `${salt}:${derivedKey.toString('hex')}`;
   }
 
   /**
@@ -25,8 +25,8 @@ class HashService {
    * @returns {Promise<boolean>} - Whether password matches hash
    */
   async verify(password, hash) {
-    const [salt, key] = hash.split(":");
-    const keyBuffer = Buffer.from(key, "hex");
+    const [salt, key] = hash.split(':');
+    const keyBuffer = Buffer.from(key, 'hex');
     const derivedKey = await scryptAsync(password, salt, this.#keyLength);
     return timingSafeEqual(keyBuffer, derivedKey);
   }
@@ -37,7 +37,7 @@ class HashService {
    * @returns {string} - Random token
    */
   generateToken(length = 32) {
-    return randomBytes(length).toString("hex");
+    return randomBytes(length).toString('hex');
   }
 }
 

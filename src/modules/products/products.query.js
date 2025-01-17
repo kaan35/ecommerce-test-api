@@ -30,7 +30,7 @@ export class ProductsQueryBuilder {
     this.#query.push({
       $facet: {
         data: [],
-        totalCount: [{ $count: "count" }],
+        totalCount: [{ $count: 'count' }],
       },
     });
     return this;

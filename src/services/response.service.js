@@ -11,14 +11,14 @@ export class ResponseService {
   };
 
   #statusMessages = {
-    BAD_REQUEST: "Bad Request",
-    CONFLICT: "Conflict",
-    CREATED: "Created",
-    FORBIDDEN: "Forbidden",
-    INTERNAL_ERROR: "Internal Server Error",
-    NOT_FOUND: "Not Found",
-    SUCCESS: "Success",
-    UNAUTHORIZED: "Unauthorized",
+    BAD_REQUEST: 'Bad Request',
+    CONFLICT: 'Conflict',
+    CREATED: 'Created',
+    FORBIDDEN: 'Forbidden',
+    INTERNAL_ERROR: 'Internal Server Error',
+    NOT_FOUND: 'Not Found',
+    SUCCESS: 'Success',
+    UNAUTHORIZED: 'Unauthorized',
   };
 
   /**
