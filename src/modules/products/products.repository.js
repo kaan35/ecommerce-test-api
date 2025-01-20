@@ -121,7 +121,7 @@ export class ProductsRepository {
       .toArray()
       .catch((error) => {
         loggerService.error({
-          context: LOG_CONTEXTS.PRODUCTS,
+          context: LOG_CONTEXTS.DATABASE,
           error,
           message: 'Error finding products',
           meta: { options },
@@ -144,7 +144,7 @@ export class ProductsRepository {
 
     if (cached) {
       loggerService.info({
-        context: LOG_CONTEXTS.PRODUCTS,
+        context: LOG_CONTEXTS.CACHE,
         message: 'Product retrieved from cache',
         meta: { id },
       });
@@ -154,7 +154,7 @@ export class ProductsRepository {
     const collection = await this.#getCollection();
     const product = await collection.findOne({ _id: id }).catch((error) => {
       loggerService.error({
-        context: LOG_CONTEXTS.PRODUCTS,
+        context: LOG_CONTEXTS.DATABASE,
         error,
         message: 'Error finding product',
         meta: { id },
@@ -183,7 +183,7 @@ export class ProductsRepository {
 
     if (cached) {
       loggerService.info({
-        context: LOG_CONTEXTS.PRODUCTS,
+        context: LOG_CONTEXTS.CACHE,
         message: 'Products by category retrieved from cache',
         meta: { category, count: cached.length },
       });
@@ -199,7 +199,7 @@ export class ProductsRepository {
       .toArray()
       .catch((error) => {
         loggerService.error({
-          context: LOG_CONTEXTS.PRODUCTS,
+          context: LOG_CONTEXTS.DATABASE,
           error,
           message: 'Error finding products by category',
           meta: { category, options },
@@ -228,7 +228,7 @@ export class ProductsRepository {
     const collection = await this.#getCollection();
     const result = await collection.insertOne(newProduct).catch((error) => {
       loggerService.error({
-        context: LOG_CONTEXTS.PRODUCTS,
+        context: LOG_CONTEXTS.DATABASE,
         error,
         message: 'Error inserting product',
         meta: { product },
@@ -251,7 +251,7 @@ export class ProductsRepository {
     const collection = await this.#getCollection();
     const product = await collection.findOne({ _id: id }).catch((error) => {
       loggerService.error({
-        context: LOG_CONTEXTS.PRODUCTS,
+        context: LOG_CONTEXTS.DATABASE,
         error,
         message: 'Error finding product for update',
         meta: { id, update },
@@ -269,7 +269,7 @@ export class ProductsRepository {
 
     await collection.updateOne({ _id: id }, { $set: updatedProduct }).catch((error) => {
       loggerService.error({
-        context: LOG_CONTEXTS.PRODUCTS,
+        context: LOG_CONTEXTS.DATABASE,
         error,
         message: 'Error updating product',
         meta: { id, update },
@@ -290,7 +290,7 @@ export class ProductsRepository {
     const collection = await this.#getCollection();
     const product = await collection.findOne({ _id: id }).catch((error) => {
       loggerService.error({
-        context: LOG_CONTEXTS.PRODUCTS,
+        context: LOG_CONTEXTS.DATABASE,
         error,
         message: 'Error finding product for deletion',
         meta: { id },
@@ -302,7 +302,7 @@ export class ProductsRepository {
 
     await collection.deleteOne({ _id: id }).catch((error) => {
       loggerService.error({
-        context: LOG_CONTEXTS.PRODUCTS,
+        context: LOG_CONTEXTS.DATABASE,
         error,
         message: 'Error deleting product',
         meta: { id },

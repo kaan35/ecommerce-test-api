@@ -1,150 +1,128 @@
 import { configService } from './config.service.js';
 import { dateService } from './date.service.js';
 
-/**
- * @typedef {'debug' | 'error' | 'info' | 'success' | 'warn'} LogLevel
- */
+/** @typedef {'debug' | 'error' | 'info' | 'success' | 'warn'} LogLevel */
+/** @typedef {'auth' | 'cache' | 'database' | 'http' | 'system'} LogContext */
 
-export const LOG_CONTEXTS = {
-  AUTH: 'Auth',
-  CACHE: 'Cache',
-  DATABASE: 'Database',
-  HTTP: 'Http',
-  PRODUCTS: 'Products',
-  SYSTEM: 'System',
+/** @type {Record<LogLevel | 'reset', string>} */
+const colors = {
+  debug: '\x1b[90m', // gray
+  error: '\x1b[31m', // red
+  info: '\x1b[37m', // white
+  success: '\x1b[32m', // green
+  warn: '\x1b[33m', // yellow
+  reset: '\x1b[0m',
 };
 
-/**
- * @typedef {Object} LogOptions
- * @property {keyof typeof LOG_CONTEXTS} context - Log context
- * @property {string} message - Log message
+/** @typedef {Object} LogOptions
+ * @property {LogContext} context - The logging context
+ * @property {string} message - The log message
  * @property {Object} [meta] - Additional metadata
  * @property {Error & { code?: string | number }} [error] - Error object
  */
 
-/**
- * @typedef {Object} LogColors
- * @property {string} debug - Gray color code
- * @property {string} error - Red color code
- * @property {string} info - White color code
- * @property {string} success - Green color code
- * @property {string} warn - Yellow color code
- * @property {string} reset - Reset color code
- */
-
 class Logger {
-  /** @type {LogColors} */
-  #colors = {
-    debug: '\x1b[90m', // gray
-    error: '\x1b[31m', // red
-    info: '\x1b[37m', // white
-    success: '\x1b[32m', // green
-    warn: '\x1b[33m', // yellow
-    reset: '\x1b[0m',
-  };
-
-  /** @type {{ env: string }} */
-  #config;
-
-  /** @type {boolean} */
-  #isDev;
-
   constructor() {
-    this.#config = configService.get('app');
-    this.#isDev = this.#config.env === 'development';
+    this.isDev = configService.get('app.env') === 'development';
   }
 
   /**
-   * Format log message
-   * @private
-   * @param {LogLevel} level - Log level
-   * @param {LogOptions} options - Log options
-   * @returns {string} Formatted log message
+   * @param {LogOptions} options
+   * @returns {string}
    */
-  #format(level, { context = LOG_CONTEXTS.SYSTEM, message, meta, error }) {
-    const timestamp = dateService.now();
-    const details = error || meta ? '\n' + JSON.stringify(error || meta, null, 2) : '';
-
-    return `[${timestamp}] ${level.toUpperCase()} [${context}] ${message}${details}`;
+  format({ context, message, meta, error }) {
+    const timestamp = dateService.now('datetime');
+    const details = error || meta ? `\n${JSON.stringify(error || meta, null, 2)}` : '';
+    return `[${timestamp}] [${context}] ${message}${details}`;
   }
 
   /**
-   * Log message with specified level
-   * @private
-   * @param {LogLevel} level - Log level
-   * @param {LogOptions} options - Log options
+   * @param {LogLevel} level
+   * @param {string} message
    */
-  #log(level, options) {
-    const formatted = this.#format(level, options);
-
-    if (this.#isDev) {
-      const color = this.#colors[level];
-      console.log(`${color}${formatted}${this.#colors.reset}`);
+  write(level, message) {
+    if (this.isDev) {
+      console.log(`${colors[level]}${message}${colors.reset}`);
       return;
     }
 
     switch (level) {
       case 'error':
-        console.error(formatted);
+        console.error(message);
         break;
       case 'warn':
-        console.warn(formatted);
+        console.warn(message);
         break;
       default:
-        console.log(formatted);
+        console.log(message);
     }
   }
 
   /**
-   * Logs debug messages (only in development environment)
+   * @param {LogOptions} options
    * @example
-   * logger.debug({ context: LOG_CONTEXTS.AUTH, message: 'User login attempt', meta: { userId: '123' } });
-   * @param {LogOptions} options - Log options
+   * logger.debug({
+   *   context: 'auth',
+   *   message: 'User login attempt',
+   *   meta: { userId: '123' }
+   * });
    */
   debug(options) {
-    if (this.#isDev) {
-      this.#log('debug', options);
+    if (this.isDev) {
+      this.write('debug', this.format(options));
     }
   }
 
   /**
-   * Logs error messages with stack trace
+   * @param {LogOptions & { error: Error }} options
    * @example
-   * logger.error({ context: LOG_CONTEXTS.DATABASE, message: 'Connection failed', error: new Error('timeout') });
-   * @param {LogOptions & { error: Error }} options - Log options with error
+   * logger.error({
+   *   context: 'database',
+   *   message: 'Connection failed',
+   *   error: new Error('timeout')
+   * });
    */
   error(options) {
-    this.#log('error', options);
+    this.write('error', this.format(options));
   }
 
   /**
-   * Logs informational messages
+   * @param {LogOptions} options
    * @example
-   * logger.info({ context: LOG_CONTEXTS.CACHE, message: 'Cache cleared', meta: { keys: 5 } });
-   * @param {LogOptions} options - Log options
+   * logger.info({
+   *   context: 'http',
+   *   message: 'Request received',
+   *   meta: { path: '/api/products' }
+   * });
    */
   info(options) {
-    this.#log('info', options);
+    this.write('info', this.format(options));
   }
 
   /**
-   * Logs success messages
+   * @param {LogOptions} options
    * @example
-   * logger.success({ context: LOG_CONTEXTS.AUTH, message: 'User registered successfully', meta: { userId: '123' } });
-   * @param {LogOptions} options - Log options
+   * logger.success({
+   *   context: 'auth',
+   *   message: 'User registered',
+   *   meta: { email: 'user@example.com' }
+   * });
    */
   success(options) {
-    this.#log('success', options);
+    this.write('success', this.format(options));
   }
 
   /**
-   * Logs warning messages
+   * @param {LogOptions} options
    * @example
-   * logger.warn({ context: LOG_CONTEXTS.HTTP, message: 'Rate limit reached', meta: { ip: '192.168.1.1' } });
-   * @param {LogOptions} options - Log options
+   * logger.warn({
+   *   context: 'cache',
+   *   message: 'Cache miss',
+   *   meta: { key: 'user:123' }
+   * });
    */
   warn(options) {
-    this.#log('warn', options);
+    this.write('warn', this.format(options));
   }
 }
 
