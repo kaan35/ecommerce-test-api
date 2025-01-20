@@ -44,7 +44,7 @@ class Logger {
     level: LogLevel,
     { context = LOG_CONTEXTS.SYSTEM, message, meta, error }: LogOptions,
   ): string {
-    const timestamp = dateService.current();
+    const timestamp = dateService.now();
     const details = error || meta ? '\n' + JSON.stringify(error || meta, null, 2) : '';
 
     return `[${timestamp}] ${level.toUpperCase()} [${context}] ${message}${details}`;

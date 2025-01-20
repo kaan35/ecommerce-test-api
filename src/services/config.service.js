@@ -18,9 +18,24 @@ class ConfigService {
     },
   };
 
-  get(path) {
-    if (!path) return this.#config;
-    return this.#config[path];
+  /**
+   * Get configuration value
+   * @param {string} key - Configuration key
+   * @returns {any} Configuration value
+   * @example get('app') // returns app config
+   */
+  get(key) {
+    return this.#config[key];
+  }
+
+  /**
+   * Set configuration value
+   * @param {string} key - Configuration key
+   * @param {any} value - Configuration value
+   * @example set('app.port', 3000)
+   */
+  set(key, value) {
+    this.#config[key] = value;
   }
 }
 

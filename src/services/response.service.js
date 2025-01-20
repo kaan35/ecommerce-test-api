@@ -1,106 +1,116 @@
-export class ResponseService {
-  #statusCodes = {
-    BAD_REQUEST: 400,
-    CONFLICT: 409,
-    CREATED: 201,
-    FORBIDDEN: 403,
-    INTERNAL_ERROR: 500,
-    NOT_FOUND: 404,
-    SUCCESS: 200,
-    UNAUTHORIZED: 401,
-  };
+/** @typedef {import('express').Response} Response */
 
-  #statusMessages = {
-    BAD_REQUEST: 'Bad Request',
-    CONFLICT: 'Conflict',
-    CREATED: 'Created',
-    FORBIDDEN: 'Forbidden',
-    INTERNAL_ERROR: 'Internal Server Error',
-    NOT_FOUND: 'Not Found',
-    SUCCESS: 'Success',
-    UNAUTHORIZED: 'Unauthorized',
-  };
+import { configService } from './config.service.js';
+
+/** @typedef {Object} ResponseData
+ * @property {string} [message] Response message
+ * @property {string} [status] Response status
+ * @property {any} [data] Response payload
+ */
+
+/** @typedef {'success' | 'error'} ResponseStatus */
+
+/** @type {Object<string, number>} HTTP status codes */
+const STATUS_CODES = Object.freeze({
+  OK: 200,
+  CREATED: 201,
+  BAD_REQUEST: 400,
+  UNAUTHORIZED: 401,
+  FORBIDDEN: 403,
+  NOT_FOUND: 404,
+  SERVER_ERROR: 500,
+});
+
+/** Response formatting service */
+class ResponseService {
+  constructor() {
+    this.config = configService.get('app');
+  }
+  /**
+   * Send JSON response
+   * @private
+   * @param {Response} res Express response
+   * @param {number} code HTTP status code
+   * @param {ResponseStatus} status Response status
+   * @param {ResponseData} [data] Response data
+   */
+  #send(res, code, status, data = {}) {
+    return res.status(code).json({
+      status,
+      ...data,
+    });
+  }
 
   /**
-   * Send response with status code
+   * Send success response (200)
+   * @param {Response} res Express response
+   * @param {ResponseData} [data] Response data
+   * @example success(res, { message: 'Product created', data: product })
    */
-  send(res, { code, body }) {
-    return res.status(code).json(body);
+  success(res, data) {
+    return this.#send(res, STATUS_CODES.OK, 'success', data);
   }
 
-  success(res, data = null, message = this.#statusMessages.SUCCESS) {
-    return res.status(this.#statusCodes.SUCCESS).json({
-      data,
-      isSuccessful: true,
-      message,
-    });
+  /**
+   * Send created response (201)
+   * @param {Response} res Express response
+   * @param {ResponseData} [data] Response data
+   * @example created(res, { data: newUser })
+   */
+  created(res, data) {
+    return this.#send(res, STATUS_CODES.CREATED, 'success', data);
   }
 
-  created(res, data = null, message = this.#statusMessages.CREATED) {
-    return res.status(this.#statusCodes.CREATED).json({
-      data,
-      isSuccessful: true,
-      message,
-    });
+  /**
+   * Send bad request response (400)
+   * @param {Response} res Express response
+   * @param {ResponseData} [data] Response data
+   * @example badRequest(res, { message: 'Invalid input' })
+   */
+  badRequest(res, data) {
+    return this.#send(res, STATUS_CODES.BAD_REQUEST, 'error', data);
   }
 
-  badRequest(res, message = this.#statusMessages.BAD_REQUEST) {
-    return res.status(this.#statusCodes.BAD_REQUEST).json({
-      isSuccessful: false,
-      message,
-    });
+  /**
+   * Send unauthorized response (401)
+   * @param {Response} res Express response
+   * @param {ResponseData} [data] Response data
+   * @example unauthorized(res, { message: 'Please login' })
+   */
+  unauthorized(res, data) {
+    return this.#send(res, STATUS_CODES.UNAUTHORIZED, 'error', data);
   }
 
-  unauthorized(res, message = this.#statusMessages.UNAUTHORIZED) {
-    return res.status(this.#statusCodes.UNAUTHORIZED).json({
-      isSuccessful: false,
-      message,
-    });
+  /**
+   * Send forbidden response (403)
+   * @param {Response} res Express response
+   * @param {ResponseData} [data] Response data
+   * @example forbidden(res, { message: 'Access denied' })
+   */
+  forbidden(res, data) {
+    return this.#send(res, STATUS_CODES.FORBIDDEN, 'error', data);
   }
 
-  forbidden(res, message = this.#statusMessages.FORBIDDEN) {
-    return res.status(this.#statusCodes.FORBIDDEN).json({
-      isSuccessful: false,
-      message,
-    });
+  /**
+   * Send not found response (404)
+   * @param {Response} res Express response
+   * @param {ResponseData} [data] Response data
+   * @example notFound(res, { message: 'Product not found' })
+   */
+  notFound(res, data) {
+    return this.#send(res, STATUS_CODES.NOT_FOUND, 'error', data);
   }
 
-  notFound(res, message = this.#statusMessages.NOT_FOUND) {
-    return res.status(this.#statusCodes.NOT_FOUND).json({
-      isSuccessful: false,
-      message,
-    });
-  }
-
-  conflict(res, message = this.#statusMessages.CONFLICT) {
-    return res.status(this.#statusCodes.CONFLICT).json({
-      isSuccessful: false,
-      message,
-    });
-  }
-
-  error(res, message = this.#statusMessages.INTERNAL_ERROR) {
-    return res.status(this.#statusCodes.INTERNAL_ERROR).json({
-      isSuccessful: false,
-      message,
-    });
-  }
-
-  custom(res, statusCode, message, data = null) {
-    return res.status(statusCode).json({
-      isSuccessful: statusCode < 400,
-      message,
-      ...(data && { data }),
-    });
-  }
-
-  getStatusCode(status) {
-    return this.#statusCodes[status] || this.#statusCodes.INTERNAL_ERROR;
-  }
-
-  getStatusMessage(status) {
-    return this.#statusMessages[status] || this.#statusMessages.INTERNAL_ERROR;
+  /**
+   * Send server error response (500)
+   * @param {Response} res Express response
+   * @param {ResponseData} [data] Response data
+   * @example error(res, { message: 'Database error' })
+   */
+  error(res, data) {
+    return this.#send(res, STATUS_CODES.SERVER_ERROR, 'error', data);
   }
 }
 
+/** @type {ResponseService} Response formatting service instance */
 export const responseService = new ResponseService();

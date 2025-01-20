@@ -35,7 +35,6 @@ class DatabaseService {
     this.#config = configService.get('db');
     this.#client = new MongoClient(this.#config.url);
     this.#setupProcessHandlers();
-    // Initialize connection on service creation
     this.#initPromise = this.#initialize();
   }
 
@@ -44,23 +43,14 @@ class DatabaseService {
    * @private
    */
   async #initialize() {
-    try {
-      await this.#client.connect();
-      this.#db = this.#client.db(this.#config.name);
-      loggerService.success({
-        context: LOG_CONTEXTS.DATABASE,
-        message: 'Successfully connected to database',
-        meta: { database: this.#config.name },
-      });
-    } catch (error) {
-      loggerService.error({
-        context: LOG_CONTEXTS.DATABASE,
-        error,
-        message: 'Failed to connect to database',
-        meta: { database: this.#config.name },
-      });
-      throw error;
-    }
+    await this.#client.connect();
+    this.#db = this.#client.db(this.#config.name);
+
+    loggerService.success({
+      context: LOG_CONTEXTS.DATABASE,
+      message: 'Successfully connected to database',
+      meta: { database: this.#config.name },
+    });
   }
 
   /**
@@ -75,7 +65,10 @@ class DatabaseService {
 
     process.on('SIGTERM', cleanup);
     process.on('SIGINT', cleanup);
+
     process.on('uncaughtException', async (error) => {
+      console.log('error', error);
+
       loggerService.error({
         context: LOG_CONTEXTS.DATABASE,
         error,
@@ -93,15 +86,12 @@ class DatabaseService {
    * @returns {Promise<import('mongodb').Collection<T>>} MongoDB collection
    */
   async collection(name) {
-    // Wait for initialization to complete
     await this.#initPromise;
 
-    // Return cached collection if exists
     if (this.#collections.has(name)) {
       return this.#collections.get(name);
     }
 
-    // Create new collection reference
     const collection = this.#db.collection(name);
     this.#collections.set(name, collection);
     return collection;
@@ -114,24 +104,15 @@ class DatabaseService {
   async disconnect() {
     if (!this.#client) return;
 
-    try {
-      await this.#client.close();
-      this.#collections.clear();
-      this.#db = null;
-      loggerService.info({
-        context: LOG_CONTEXTS.DATABASE,
-        message: 'Database disconnected successfully',
-        meta: { database: this.#config.name },
-      });
-    } catch (error) {
-      loggerService.error({
-        context: LOG_CONTEXTS.DATABASE,
-        error,
-        message: 'Error disconnecting from database',
-        meta: { database: this.#config.name },
-      });
-      throw error;
-    }
+    await this.#client.close();
+    this.#collections.clear();
+    this.#db = null;
+
+    loggerService.info({
+      context: LOG_CONTEXTS.DATABASE,
+      message: 'Database disconnected successfully',
+      meta: { database: this.#config.name },
+    });
   }
 
   /**
@@ -139,13 +120,9 @@ class DatabaseService {
    * @returns {Promise<boolean>}
    */
   async ping() {
-    try {
-      await this.#initPromise;
-      await this.#db.command({ ping: 1 });
-      return true;
-    } catch {
-      return false;
-    }
+    await this.#initPromise;
+    const result = await this.#db.command({ ping: 1 }).catch(() => false);
+    return Boolean(result);
   }
 
   /**
@@ -172,5 +149,4 @@ class DatabaseService {
   }
 }
 
-// Export singleton instance
 export const databaseService = new DatabaseService();

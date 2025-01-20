@@ -1,13 +1,7 @@
-import { ResponseService } from '../../services/response.service.js';
+import { responseService } from '../../services/response.service.js';
 import { productsService } from './products.service.js';
 
 export class ProductsController {
-  #responseService;
-
-  constructor() {
-    this.#responseService = new ResponseService();
-  }
-
   async getAllProducts(req, res) {
     const { page = 1, limit = 10, sort, filter } = req.query;
     const products = await productsService.find({
@@ -17,7 +11,7 @@ export class ProductsController {
       filter,
     });
 
-    return this.#responseService.success(res, products);
+    return responseService.success(res, products);
   }
 
   async getProductById(req, res) {
@@ -25,17 +19,17 @@ export class ProductsController {
     const product = await productsService.findOne(id);
 
     if (!product) {
-      return this.#responseService.notFound(res, 'Product not found');
+      return responseService.notFound(res, 'Product not found');
     }
 
-    return this.#responseService.success(res, product);
+    return responseService.success(res, product);
   }
 
   async createProduct(req, res) {
     const productData = req.body;
     const product = await productsService.create(productData);
 
-    return this.#responseService.created(res, product);
+    return responseService.created(res, product);
   }
 
   async updateProduct(req, res) {
@@ -45,10 +39,10 @@ export class ProductsController {
     const product = await productsService.update(id, updateData);
 
     if (!product) {
-      return this.#responseService.notFound(res, 'Product not found');
+      return responseService.notFound(res, 'Product not found');
     }
 
-    return this.#responseService.success(res, product);
+    return responseService.success(res, product);
   }
 
   async deleteProduct(req, res) {
@@ -56,10 +50,10 @@ export class ProductsController {
     const deleted = await productsService.delete(id);
 
     if (!deleted) {
-      return this.#responseService.notFound(res, 'Product not found');
+      return responseService.notFound(res, 'Product not found');
     }
 
-    return this.#responseService.success(res, null, 'Product deleted successfully');
+    return responseService.success(res, null, 'Product deleted successfully');
   }
 }
 
