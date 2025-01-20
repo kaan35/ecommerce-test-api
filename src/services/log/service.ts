@@ -1,40 +1,11 @@
-import { configService } from './config.service.js';
-import { dateService } from './date.service.js';
+import { configService } from '../config/service.ts';
+import { dateService } from '../date/service.ts';
+import { CONSOLE_COLORS } from './constants.ts';
+import type { LogLevel, LogOptions } from './types.ts';
 
-export const LOG_CONTEXTS = {
-  AUTH: 'Auth',
-  CACHE: 'Cache',
-  DATABASE: 'Database',
-  HTTP: 'Http',
-  SYSTEM: 'System',
-} as const;
-
-type LogLevel = 'debug' | 'error' | 'info' | 'success' | 'warn';
-type LogContext = keyof typeof LOG_CONTEXTS;
-
-type LogColors = {
-  [K in LogLevel | 'reset']: string;
-};
-
-const COLORS: LogColors = {
-  debug: '\x1b[90m', // gray
-  error: '\x1b[31m', // red
-  info: '\x1b[37m', // white
-  success: '\x1b[32m', // green
-  warn: '\x1b[33m', // yellow
-  reset: '\x1b[0m',
-} as const;
-
-type LogOptions = {
-  context: LogContext;
-  message: string;
-  meta?: Object;
-  error?: Error & { code?: string | number };
-};
-
-class Logger {
-  private readonly config: { env: string };
-  private readonly isDev: boolean;
+class LogService {
+  private config: { env: string };
+  private isDev: boolean;
 
   constructor() {
     this.config = configService.get('app');
@@ -46,7 +17,7 @@ class Logger {
    * @param options - Log options containing message and metadata
    * @returns Formatted log message string
    */
-  private format({ context, message, meta, error }: LogOptions): string {
+  format({ context, message, meta, error }: LogOptions): string {
     const timestamp = dateService.now('datetime');
     const details = error || meta ? `\n${JSON.stringify(error || meta, null, 2)}` : '';
     return `[${timestamp}] [${context}] ${message}${details}`;
@@ -57,8 +28,8 @@ class Logger {
    * @param level - Log level determining color and console method
    * @param message - Formatted message to write
    */
-  private write(level: LogLevel, message: string): void {
-    console.log(`${COLORS[level]}${message}${COLORS.reset}`);
+  write(level: LogLevel, message: string): void {
+    console.log(`${CONSOLE_COLORS[level]}${message}${CONSOLE_COLORS.reset}`);
   }
 
   /**
@@ -66,7 +37,7 @@ class Logger {
    * @param options - Log options
    * @example
    * logger.debug({
-   *  context: LOG_CONTEXTS.AUTH,
+   *  context: 'auth',
    *  message: 'User login attempt',
    *  meta: { userId: '123' },
    * });
@@ -82,7 +53,7 @@ class Logger {
    * @param options - Log options with required error object
    * @example
    * logger.error({
-   *  context: LOG_CONTEXTS.DATABASE,
+   *  context: 'database',
    *  message: 'Connection failed',
    *  error: new Error('timeout'),
    * });
@@ -96,7 +67,7 @@ class Logger {
    * @param options - Log options
    * @example
    * logger.info({
-   *  context: LOG_CONTEXTS.CACHE,
+   *  context: 'cache',
    *  message: 'Cache cleared',
    *  meta: { keys: 5 },
    * });
@@ -110,7 +81,7 @@ class Logger {
    * @param options - Log options
    * @example
    * logger.success({
-   *  context: LOG_CONTEXTS.AUTH,
+   *  context: 'auth',
    *  message: 'User registered successfully',
    *  meta: { userId: '123' }
    * });
@@ -124,7 +95,7 @@ class Logger {
    * @param options - Log options
    * @example
    * logger.warn({
-   *  context: LOG_CONTEXTS.HTTP,
+   *  context: 'http',
    *  message: 'Rate limit reached',
    *  meta: { ip: '192.168.1.1' }
    * });
@@ -134,4 +105,4 @@ class Logger {
   }
 }
 
-export const loggerService = new Logger();
+export const logService = new LogService();

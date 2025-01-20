@@ -1,35 +1,5 @@
-/** Date format options */
-type DateFormat = 'date' | 'time' | 'datetime' | 'timestamp' | 'number';
-
-/** Time unit options */
-type DateUnit = 'days' | 'hours' | 'minutes' | 'seconds';
-
-/** Milliseconds per time unit */
-const MS_PER_UNIT = {
-  days: 86400000, // 24 * 60 * 60 * 1000
-  hours: 3600000, // 60 * 60 * 1000
-  minutes: 60000, // 60 * 1000
-  seconds: 1000,
-} as const;
-
-/** Date formatters using en-GB locale */
-const DATE_FORMATTERS = {
-  date: (d: Date) => d.toLocaleDateString('en-GB'),
-  time: (d: Date) => d.toLocaleTimeString('en-GB'),
-  datetime: (d: Date) => d.toLocaleString('en-GB'),
-  timestamp: (d: Date) => d.toISOString(),
-  number: (d: Date) => d.getTime(),
-} as const;
-
-/** Date pattern formatters */
-const DATE_PATTERNS = {
-  YYYY: (d: Date) => d.getFullYear(),
-  MM: (d: Date) => String(d.getMonth() + 1).padStart(2, '0'),
-  DD: (d: Date) => String(d.getDate()).padStart(2, '0'),
-  HH: (d: Date) => String(d.getHours()).padStart(2, '0'),
-  mm: (d: Date) => String(d.getMinutes()).padStart(2, '0'),
-  ss: (d: Date) => String(d.getSeconds()).padStart(2, '0'),
-} as const;
+import { DATE_FORMATTERS, DATE_PATTERNS, MS_PER_UNIT } from './constants.ts';
+import type { DateFormat, DateUnit } from './types.ts';
 
 /** Date utility service */
 class DateService {
@@ -41,9 +11,8 @@ class DateService {
    * now('date')        // '11/02/2024'
    * now('time')        // '14:30:45'
    * now('timestamp')   // '2024-02-11T14:30:45.123Z'
-   * now('number')      // 1707658279123
    */
-  now(format: DateFormat = 'datetime'): string | number {
+  now(format: DateFormat = 'datetime'): string {
     return DATE_FORMATTERS[format](new Date());
   }
 
