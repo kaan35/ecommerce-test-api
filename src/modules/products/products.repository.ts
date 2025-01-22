@@ -2,8 +2,9 @@ import type { Collection, WithId } from 'mongodb';
 import { ObjectId } from 'mongodb';
 import { cacheService } from '../../services/cache/service.ts';
 import { databaseService } from '../../services/database/service.ts';
+import { dateService } from '../../services/date/service.ts';
 import { logService } from '../../services/log/service.ts';
-import type { FindOptions, Product } from './types.ts';
+import type { CreateProductDTO, FindOptions, Product } from './types.ts';
 
 const CACHE_KEYS = {
   ALL: 'products:all',
@@ -77,21 +78,18 @@ export class ProductsRepository {
     return products;
   }
 
-  async insert(data: Omit<Product, '_id' | 'createdAt' | 'updatedAt'>): Promise<WithId<Product>> {
+  async insert(data: CreateProductDTO): Promise<WithId<Product>> {
     const collection = await this.#collection;
-    const now = Date.now();
 
     const result = await collection.insertOne({
       ...data,
-      createdAt: now,
-      updatedAt: now,
+      createdAt: dateService.now(),
+      createdAtTimestamp: dateService.now('timestamp'),
     } as Product);
 
     const product = {
       _id: result.insertedId,
       ...data,
-      createdAt: now,
-      updatedAt: now,
     } as WithId<Product>;
 
     await this.#invalidateCache([CACHE_KEYS.ALL, CACHE_KEYS.BY_CATEGORY(data.category)]);
@@ -106,7 +104,8 @@ export class ProductsRepository {
     const updatedProduct = {
       ...product,
       ...data,
-      updatedAt: Date.now(),
+      updatedAt: dateService.now(),
+      updatedAtTimestamp: dateService.now('timestamp'),
     };
 
     await collection.updateOne({ _id: new ObjectId(id) }, { $set: updatedProduct });

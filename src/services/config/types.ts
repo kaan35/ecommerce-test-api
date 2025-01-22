@@ -8,9 +8,7 @@ export interface CacheConfig {
 }
 
 export interface DatabaseConfig {
-  maxRetries: number;
   name: string;
-  retryDelay: number;
   url: string;
 }
 
@@ -21,6 +19,6 @@ export interface SecurityConfig {
 export interface Config {
   app: AppConfig;
   cache: CacheConfig;
-  db: DatabaseConfig;
+  database: DatabaseConfig;
   security: SecurityConfig;
 }

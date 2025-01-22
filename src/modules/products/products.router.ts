@@ -1,28 +1,29 @@
-import { Router } from 'express';
+import type { Router } from 'express';
+import { Router as ExpressRouter } from 'express';
 import { ProductsController } from './products.controller.ts';
 
 export class ProductsRouter {
-  #router;
-  #controller;
+  readonly #router: Router;
+  readonly #controller: ProductsController;
 
   constructor() {
-    this.#router = Router();
+    this.#router = ExpressRouter();
     this.#controller = new ProductsController();
     this.#setupRoutes();
   }
 
-  #setupRoutes() {
+  #setupRoutes(): void {
     // Public routes
-    this.#router.get('/', (req, res) => this.#controller.getAllProducts(req, res));
-    this.#router.get('/:id', (req, res) => this.#controller.getProductById(req, res));
-
-    // Protected routes
-    this.#router.post('/', (req, res) => this.#controller.createProduct(req, res));
-    this.#router.put('/:id', (req, res) => this.#controller.updateProduct(req, res));
-    this.#router.delete('/:id', (req, res) => this.#controller.deleteProduct(req, res));
+    this.#router
+      .get('/', this.#controller.getAll)
+      .get('/:id', this.#controller.getById)
+      // Protected routes
+      .post('/', this.#controller.create)
+      .put('/:id', this.#controller.update)
+      .delete('/:id', this.#controller.delete);
   }
 
-  get router() {
+  get router(): Router {
     return this.#router;
   }
 }

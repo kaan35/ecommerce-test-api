@@ -60,5 +60,6 @@ typings/
 # next.js build output
 .next
 
-src/utils/db.js
-src/utils/config.js
+dist
+
+src/services/config/service.ts

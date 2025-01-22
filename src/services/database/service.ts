@@ -1,6 +1,7 @@
 import type { Collection, Db, Document } from 'mongodb';
 import { MongoClient } from 'mongodb';
 import { configService } from '../config/service.ts';
+import type { DatabaseConfig } from '../config/types.ts';
 import { logService } from '../log/service.ts';
 import { DATABASE_CONTEXTS, DATABASE_MESSAGES } from './constants.ts';
 import type { ConnectionStatus } from './types.ts';
@@ -9,10 +10,11 @@ class DatabaseService {
   private client: MongoClient;
   private db: Db | null = null;
   private initPromise: Promise<void>;
+  private config: DatabaseConfig;
 
   constructor() {
-    const config = configService.get('db');
-    this.client = new MongoClient(config.url);
+    this.config = configService.get('database');
+    this.client = new MongoClient(this.config.url);
     this.initPromise = this.connect();
 
     process.on('SIGTERM', () => this.disconnect());
@@ -25,11 +27,11 @@ class DatabaseService {
     return this.client
       .connect()
       .then(() => {
-        this.db = this.client.db(configService.get('db').name);
+        this.db = this.client.db(this.config.name);
         logService.success({
           context: DATABASE_CONTEXTS.DATABASE,
           message: DATABASE_MESSAGES.CONNECT_SUCCESS,
-          meta: { database: configService.get('db').name },
+          meta: { database: this.config.name },
         });
       })
       .catch((error: Error) => {
@@ -84,8 +86,8 @@ class DatabaseService {
       isConnected: this.db !== null,
       retryAttempts: 0,
       database: {
-        name: configService.get('db').name,
-        url: configService.get('db').url,
+        name: this.config.name,
+        url: this.config.url,
       },
     };
   }
