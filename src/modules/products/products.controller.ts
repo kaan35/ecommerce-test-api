@@ -22,7 +22,7 @@ export class ProductsController {
 
   async getById(req: Request, res: Response): Promise<void> {
     await productsService
-      .findOne(req.params.id)
+      .findOne(req.params.id || '')
       .then((product) => responseService.success(res, { data: product }))
       .catch((error) => errorService.handleError(error, res, 'database'));
   }
@@ -36,14 +36,14 @@ export class ProductsController {
 
   async update(req: Request, res: Response): Promise<void> {
     await productsService
-      .update(req.params.id, req.body)
+      .update(req.params.id || '', req.body)
       .then((product) => responseService.success(res, { data: product }))
       .catch((error) => errorService.handleError(error, res, 'database'));
   }
 
   async delete(req: Request, res: Response): Promise<void> {
     await productsService
-      .delete(req.params.id)
+      .delete(req.params.id || '')
       .then(() => responseService.success(res, { message: 'Product deleted successfully' }))
       .catch((error) => errorService.handleError(error, res, 'database'));
   }

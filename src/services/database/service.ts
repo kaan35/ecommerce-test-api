@@ -1,4 +1,5 @@
 import type { Collection, Db, Document } from 'mongodb';
+// eslint-disable-next-line no-duplicate-imports
 import { MongoClient } from 'mongodb';
 import { configService } from '../config/service.ts';
 import type { DatabaseConfig } from '../config/types.ts';
@@ -73,22 +74,14 @@ class DatabaseService {
     return this.db!.collection<TSchema>(name);
   }
 
-  async ping(): Promise<boolean> {
-    if (!this.db) return false;
-    return this.db
-      .command({ ping: 1 })
-      .then(() => true)
-      .catch(() => false);
-  }
-
   getConnectionStatus(): ConnectionStatus {
     return {
-      isConnected: this.db !== null,
-      retryAttempts: 0,
       database: {
         name: this.config.name,
         url: this.config.url,
       },
+      isConnected: this.db !== null,
+      retryAttempts: 0,
     };
   }
 }

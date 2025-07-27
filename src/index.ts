@@ -40,11 +40,11 @@ class Server {
     this.app.get('/health', (_req, res) => {
       responseService.success(res, {
         data: {
-          date: dateService.now(),
+          cache: cacheService.getConnectionStatus().isConnected ? 'connected' : 'disconnected',
           database: databaseService.getConnectionStatus().isConnected
             ? 'connected'
             : 'disconnected',
-          cache: cacheService.getConnectionStatus().isConnected ? 'connected' : 'disconnected',
+          date: dateService.now(),
         },
       });
     });
@@ -103,8 +103,8 @@ class Server {
             context: 'system',
             message: 'Server started successfully',
             meta: {
-              port: this.config.port,
               env: process.env.NODE_ENV || 'development',
+              port: this.config.port,
             },
           });
           resolve();

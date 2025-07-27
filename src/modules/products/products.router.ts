@@ -1,13 +1,12 @@
-import type { Router } from 'express';
-import { Router as ExpressRouter } from 'express';
 import { ProductsController } from './products.controller.ts';
+import { Router } from 'express';
 
 export class ProductsRouter {
   readonly #router: Router;
   readonly #controller: ProductsController;
 
   constructor() {
-    this.#router = ExpressRouter();
+    this.#router = Router();
     this.#controller = new ProductsController();
     this.#setupRoutes();
   }

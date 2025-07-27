@@ -1,4 +1,5 @@
 import type { Collection, WithId } from 'mongodb';
+// eslint-disable-next-line no-duplicate-imports
 import { ObjectId } from 'mongodb';
 import { cacheService } from '../../services/cache/service.ts';
 import { databaseService } from '../../services/database/service.ts';
@@ -23,8 +24,8 @@ export class ProductsRepository {
     await Promise.all(keys.map((key) => cacheService.del(key))).catch((error: Error) => {
       logService.error({
         context: 'cache',
-        message: 'Failed to invalidate cache',
         error,
+        message: 'Failed to invalidate cache',
         meta: { keys },
       });
     });

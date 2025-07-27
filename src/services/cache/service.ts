@@ -30,8 +30,8 @@ class CacheService {
 
   #handleError(error: Error, meta?: Record<string, unknown>): void {
     logService.error({
-      context: CACHE_CONTEXTS.CACHE,
       error,
+      context: CACHE_CONTEXTS.CACHE,
       message: CACHE_MESSAGES.CLIENT_ERROR,
       meta: { isConnected: this.isConnected, ...meta },
     });

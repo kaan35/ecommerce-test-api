@@ -2,15 +2,13 @@ import pluginJs from '@eslint/js';
 import eslintConfigPrettier from 'eslint-config-prettier';
 import eslintPluginPrettier from 'eslint-plugin-prettier/recommended';
 import globals from 'globals';
+import tseslint from 'typescript-eslint';
 
 export default [
-  {
-    files: ['**/*.{js,mjs,cjs,jsx}'],
-  },
-  {
-    ignores: ['**/node_modules/*', '**/dist/*', '**/tests/*', 'tsconfig.json'],
-  },
+  { files: ['**/*.{js,mjs,cjs,ts}'] },
+  { ignores: ['**/node_modules/*', '**/dist/*', '**/tests/*', 'tsconfig.json'] },
   { languageOptions: { globals: { ...globals.browser, ...globals.node } } },
+  ...tseslint.configs.recommended,
   eslintConfigPrettier,
   eslintPluginPrettier,
   pluginJs.configs.recommended,
@@ -20,8 +18,8 @@ export default [
       'no-duplicate-imports': ['error', { includeExports: true }],
       'no-undef': 'warn',
       'no-unused-vars': 'warn',
-      // 'require-await': 'warn',
-      // 'sort-keys': 'warn',
+      'require-await': 'warn',
+      'sort-keys': 'warn',
       'sort-vars': 'warn',
     },
   },
